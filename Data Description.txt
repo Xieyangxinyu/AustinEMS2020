@@ -1,0 +1,57 @@
+Filename: Incidents2019_2020.csv
+Description: Problem Type, Service Time and Call Disposition of each EMS incident in 2019-2020.
+Columns:
+[1] "Problem"                  "Time_PhonePickUp_Date"    "Time_First_Unit_Assigned"
+[4] "Time_First_Unit_Enroute"  "Time_First_Unit_Arrived"  "Call_Disposition"     
+·       Problem states the problem type of the emergency.
+·       Time_PhonePickUp_Date states the date of the EMS call.
+·       Time_First_Unit_Assigned (in minutes) states the length of time, in minutes, after the EMS call was picked up and before the first ambulance received notification of the emergency and was as- signed.
+·       Time_First_Unit_Enroute (in minutes) states the length of time, in minutes, after the first ambu- lance was assigned and before the ambulance set off toward the emergency.
+·       Time_First_Unit_Arrived (in minutes) states the length of time, in minutes, after the first ambu- lance wheels began to roll and before the ambulance arrived at the emergency and the wheels stopped.
+·       Call_Disposition states the final disposition of the event, such as cancelled call, transported to hospital, etc. If the ambulance transported the patient to a hospital, the name of the hospital would be specified. If the emergency call was from another government agency, for exam- ple, the Austin Fire Department, then the call dispo- sition would be labelled as ”referred”. Other types of call dispositions fall into the category of ”defunct calls”; in this case, the call disposition of an incident would be labelled as its respective subcategory.
+
+Head:
+            Problem Time_PhonePickUp_Date Time_First_Unit_Assigned Time_First_Unit_Enroute
+1       Unconscious            2019-10-14                 1.750000               0.8500000
+2           Assault            2019-10-14                 0.500000               0.4000000
+3    Abdominal Pain            2019-10-14                 1.566667               0.3333333
+4 Allergic Reaction            2019-10-14                 1.450000               1.1833333
+5          Overdose            2019-10-14                 0.600000               0.9666667
+6  Syncopal Episode            2019-10-14                 1.666667               0.5666667
+  Time_First_Unit_Arrived               Call_Disposition
+1                8.483333 Baylor Scott & White - Lakeway
+2                4.666667                        Refusal
+3                6.083333                  Seton Med Ctr
+4                5.216667                        Refusal
+5                2.333333                       Referred
+6                7.966667          South Austin Hospital
+
+
+Filename: ts_2019_2020.csv
+Description: Time series of the daily frequency of EMS incidents from 2019 to 2020
+Columns:
+[1] "total_ts"                          "defunct_calls_pandemic_removed_ts"
+[3] "Pandemic_defunct_calls_ts"         "Incidents_pandemic_removed_ts"    
+[5] "Pandemic_effect_ts"                "hospitalisation_ts"     
+·       total_ts: the daily frequency of all EMS in- cidents.
+·       defunct_calls_pandemic_removed_ts: the daily frequency of non-pandemic defunct EMS incidents.
+·       Pandemic_defunct_calls_ts: the daily frequency of pandemic defunct EMS incidents.
+·       Incidents_pandemic_removed_ts: the daily frequency of non-pandemic, non-defunct EMS incidents.
+·       Pandemic_effect_ts: the daily frequency of pandemic, non-defunct EMS incidents.
+·       hospitalisation_ts: the daily frequency of the newly admitted Covid-19 patients to hos- pitals in the Austin-Round Rock metropolitan statistical area.
+
+Head:
+  total_ts defunct_calls_pandemic_removed_ts Pandemic_defunct_calls_ts Incidents_pandemic_removed_ts
+1      348                               121                         0                           227
+2      344                               116                         0                           228
+3      323                               101                         0                           222
+4      314                                91                         0                           223
+5      309                                98                         0                           211
+6      291                                83                         0                           208
+Pandemic_effect_ts hospitalisation_ts
+1                  0                  0
+2                  0                  0
+3                  0                  0
+4                  0                  0
+5                  0                  0
+6                  0                  0

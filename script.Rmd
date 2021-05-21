@@ -1,0 +1,640 @@
+---
+title: "Predicting Covid-19 EMS Incidents from Daily Hospitalization Trends"
+author: "Ngoc Mai Tran, Evdokia Nikolova, David Kulpanowski, Yangxinyu Xie, Joshua Ong"
+output: github_document
+---
+
+## Load Incident Data
+
+```{r load}
+setwd("~/Desktop/ems/data/final")
+rm(list = ls())
+Incidents <- read.csv("Incidents2019_2020.csv")
+ts.df <- read.csv("ts_2019_2020.csv")
+nrow(Incidents)
+```
+
+## Basic Data Description
+
+Call Disposition
+
+```{r Basic Statistics Call Disposition}
+library(ggplot2)
+table_call <- summary(Incidents$Call_Disposition)
+table_call <- table_call[table_call > 0]
+s <- sum(table_call)
+table_call <- data.frame(table_call[table_call > 5000])
+colnames(table_call) <- "Count"
+table_call$Percentage <- format(table_call$Count/s * 100, digits = 3)
+table_call$Call_Disposition = row.names(table_call)
+
+print("Proportion of the 6 major hospitals")
+
+sum(table_call[table_call$Call_Disposition %in% c("Dell Seton Med Ctr", "South Austin Hospital", "Saint Davids Med Ctr", "North Austin Hospital", "Seton Med Ctr", "Seton Northwest"),]$Count)/s
+
+colors <- c("Refusal" = "#575655", "Other" = "#575655", "Call Cancelled" = "#575655", "Referred" = "#575655",
+            "No Patient" = "#575655", "Dell Seton Med Ctr" = "#029ac4", "North Austin Hospital" = "#029ac4", "Saint Davids Med Ctr" = "#029ac4", "Seton Med Ctr" = "#029ac4", "Seton Northwest" = "#029ac4", "South Austin Hospital" = "#029ac4")
+g1 <- ggplot(data=table_call, aes(x=reorder(Call_Disposition, Count),y=Percentage, fill = Call_Disposition)) +
+    scale_fill_manual(limits = c("Dell Seton Med Ctr", "South Austin Hospital", "Saint Davids Med Ctr", "North Austin Hospital", "Seton Med Ctr", "Seton Northwest", "Refusal", "Call Cancelled", "Referred", "No Patient", "Other"), values = colors) +
+    geom_bar(position="dodge",stat="identity") + 
+    geom_text(aes(label=Percentage), hjust=1, color="white", size=3.5) +
+    theme(axis.title.y=element_blank(),
+      axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+       legend.title = element_blank()) +
+    coord_flip()
+    print(g1)
+```
+
+Major Problems
+
+``` {r problems}
+table <- summary(Incidents$Problem)
+Problem_Highest_Freq = data.frame(table[table > 3000])
+colnames(Problem_Highest_Freq) <- "Count"
+Problem_Highest_Freq$Problem_Type = row.names(Problem_Highest_Freq)
+
+colors <- c("Altered Mentation" = "#6930c3", 
+            "Attended Patient" = "#6930c3", 
+            "Chest Pain" = "#6930c3", 
+            "Community Health Assist" = "#6930c3", 
+            "Fall" = "#6930c3", 
+            "Hemorrhage" = "#6930c3", 
+            "Respiratory" = "#6930c3", 
+            "Seizure" = "#6930c3", 
+            "Sick" = "#6930c3", 
+            "Syncopal Episode" = "#6930c3", 
+            "Traffic Injury" = "#6930c3", 
+            "Unconscious" = "#6930c3",
+            "Pandemic" = "#ef233c",
+            "Stroke" = "#8d99ae",
+            "Abdominal Pain" = "#8d99ae",
+            "Alarm Activation" = "#8d99ae",
+            "Assault" = "#8d99ae",
+            "Injury" = "#8d99ae",
+            "Cardiac Arrest" = "#8d99ae",
+            "Psychiatric" = "#8d99ae",
+            "Overdose" = "#8d99ae", 
+            "Diabetic" = "#8d99ae")
+
+
+ggplot(data=Problem_Highest_Freq, aes(x=reorder(Problem_Type, Count),y=Count, fill = Problem_Type)) +
+    scale_fill_manual(limits = c("Overdose", 
+            "Diabetic", 
+            "Altered Mentation", 
+            "Attended Patient", 
+            "Chest Pain", 
+            "Community Health Assist", 
+            "Fall", 
+            "Hemorrhage", 
+            "Respiratory", 
+            "Seizure", 
+            "Sick", 
+            "Syncopal Episode", 
+            "Traffic Injury", 
+            "Unconscious",
+            "Pandemic",
+            "Stroke",
+            "Abdominal Pain",
+            "Alarm Activation",
+            "Assault",
+            "Injury",
+            "Cardiac Arrest",
+            "Psychiatric"), values = colors) +
+    geom_bar(position="dodge",stat="identity") + 
+    geom_text(aes(label=Count), hjust=1, color="white", size=3.5) +
+    theme(axis.title.y=element_blank(),
+      axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+       legend.title = element_blank()) +
+    coord_flip() + theme(legend.position = "none")
+
+print("Proportion of the major problems")
+sum(Problem_Highest_Freq$Count)/nrow(Incidents)
+```
+
+Response time histogram
+
+``` {r Service Time Distribution}
+Incidents_assigned <- Incidents[Incidents$Time_First_Unit_Assigned >= 0 & !is.na(Incidents$Time_First_Unit_Assigned),]$Time_First_Unit_Assigned
+
+Incidents_Enroute <- Incidents[Incidents$Time_First_Unit_Enroute >= 0 &!is.na(Incidents$Time_First_Unit_Enroute),]$Time_First_Unit_Enroute
+
+Incidents_Arrived <- Incidents[Incidents$Time_First_Unit_Arrived >= 0 & !is.na(Incidents$Time_First_Unit_Arrived),]$Time_First_Unit_Arrived
+
+par(mfrow=c(3,1))
+
+hist(Incidents_assigned, xlim = c(0,5), breaks = max(Incidents_assigned)*20, xlab = "Assignment Time (minutes)", main = "")
+legend("topright", legend=c("mean", "median"),
+       col=c("blue", "purple"), lty = 1:2, cex=0.8)
+abline(v=mean(Incidents_assigned), col="purple", lwd=2)
+mean(Incidents_assigned)
+abline(v=median(Incidents_assigned), col="blue", lwd=2, lty = 2)
+median(Incidents_assigned)
+
+hist(Incidents_Enroute, xlim = c(0,5), breaks = max(Incidents_Enroute)*20, xlab = "Dispatch Time (minutes)", main = "")
+abline(v=mean(Incidents_Enroute), col="purple", lwd=2)
+mean(Incidents_Enroute)
+abline(v=median(Incidents_Enroute), col="blue", lwd=2, lty = 2)
+median(Incidents_Enroute)
+
+hist(Incidents_Arrived, xlim = c(0,20), breaks = max(Incidents_Arrived)*20, xlab = "Arrival Time (minutes)", main = "")
+abline(v=mean(Incidents_Arrived), col="purple", lwd=2)
+mean(Incidents_Arrived)
+abline(v=median(Incidents_Arrived), col="blue", lwd=2, lty = 2)
+median(Incidents_Arrived)
+```
+
+Major hospital response time anova analysis.
+
+```{r anova analysis hospital service time}
+library(gplots)
+library(dplyr)
+
+print("Assignment Time")
+
+Incidents_assigned <- Incidents[Incidents$Time_First_Unit_Assigned >= 0 & !is.na(Incidents$Time_First_Unit_Assigned),]
+
+Incidents_assigned_Major_hospital <- Incidents_assigned[Incidents_assigned$Call_Disposition %in% c("Dell Seton Med Ctr", "South Austin Hospital", "Saint Davids Med Ctr", "North Austin Hospital", "Seton Med Ctr", "Seton Northwest"),]
+
+ggplot(Incidents_assigned_Major_hospital, aes(x=Call_Disposition, y=Time_First_Unit_Assigned)) +
+  geom_violin(trim=FALSE) + stat_summary(fun=mean, geom="point", size=2, color="red") + 
+  xlab("") + ylab("Assignment Time") + coord_flip() + ylim(0,5)
+
+Incidents_assigned_Major_hospital %>% group_by(Call_Disposition) %>% summarise(Mean=mean(Time_First_Unit_Assigned), Median=median(Time_First_Unit_Assigned))
+
+fit <- aov(Time_First_Unit_Assigned ~ Call_Disposition, data = Incidents_assigned_Major_hospital)
+summary(fit)
+
+print("Dispatch Time")
+
+Incidents_Enroute <- Incidents[Incidents$Time_First_Unit_Enroute >= 0 &!is.na(Incidents$Time_First_Unit_Enroute),]
+
+Incidents_Enroute_Major_hospital <- Incidents_Enroute[Incidents_Enroute$Call_Disposition %in% c("Dell Seton Med Ctr", "South Austin Hospital", "Saint Davids Med Ctr", "North Austin Hospital", "Seton Med Ctr", "Seton Northwest"),]
+
+ggplot(Incidents_Enroute_Major_hospital, aes(x=Call_Disposition, y=Time_First_Unit_Enroute)) +
+  geom_violin(trim=FALSE) + stat_summary(fun=mean, geom="point", size=2, color="red") +
+  xlab("") + ylab("Dispatch Time") + coord_flip() + ylim(0,5)
+
+Incidents_Enroute_Major_hospital %>% group_by(Call_Disposition) %>% summarise(Mean=mean(Time_First_Unit_Enroute), Median=median(Time_First_Unit_Enroute))
+
+fit <- aov(Time_First_Unit_Enroute ~ Call_Disposition, data = Incidents_Enroute_Major_hospital)
+summary(fit)
+
+print("Arrival Time")
+
+Incidents_Arrived <- Incidents[Incidents$Time_First_Unit_Arrived >= 0 & !is.na(Incidents$Time_First_Unit_Arrived),]
+
+Incidents_Arrived_Major_hospital <- Incidents_Arrived[Incidents_Arrived$Call_Disposition %in% c("Dell Seton Med Ctr", "South Austin Hospital", "Saint Davids Med Ctr", "North Austin Hospital", "Seton Med Ctr", "Seton Northwest"),]
+
+ggplot(Incidents_Arrived_Major_hospital, aes(x=Call_Disposition, y=Time_First_Unit_Arrived)) +
+  geom_violin(trim=FALSE) + stat_summary(fun=mean, geom="point", size=2, color="red") + 
+  xlab("") + ylab("Arrival Time") + coord_flip() + ylim(0,30)
+
+Incidents_Arrived_Major_hospital %>% group_by(Call_Disposition) %>% summarise(Mean=mean(Time_First_Unit_Arrived), Median=median(Time_First_Unit_Arrived))
+
+fit <- aov(Time_First_Unit_Arrived ~ Call_Disposition, data = Incidents_Arrived_Major_hospital)
+summary(fit)
+
+plotmeans(Time_First_Unit_Assigned ~ Call_Disposition, data = Incidents_assigned_Major_hospital, xlab="Hospital", cex.axis = 0.5, ylab="Assignment Time(minutes)", 
+             main="Mean Plot with 95% CI")
+plotmeans(Time_First_Unit_Enroute ~ Call_Disposition, data = Incidents_Enroute_Major_hospital, xlab="Hospital", cex.axis = 0.5, ylab="Dispatch Time(minutes)", 
+             main="Mean Plot with 95% CI")
+plotmeans(Time_First_Unit_Arrived ~ Call_Disposition, data = Incidents_Arrived_Major_hospital, xlab="Hospital", cex.axis = 0.5, ylab="Arrival Time(minutes)", 
+             main="Mean Plot with 95% CI")
+```
+
+
+## Time Series Data Processing
+
+to_daily_ts is a function that converts incidents data into daily counts. 
+
+``` {r ts}
+library(stats)
+library(forecast)
+library(car)
+library(astsa)
+library(nlme)
+library(gridExtra)
+library(TSA)
+library(xts)
+library(ggplot2)
+library(lubridate)
+library(tseries)
+last_day <- as.Date("2020-12-31")
+first_day <- as.Date("2019/01/01")
+```
+
+Time series of overall EMS calls.
+
+``` {r total ts}
+total_ts <- ts(ts.df$total_ts, start = first_day)
+summary(total_ts)
+sd(total_ts)
+```
+
+Time series of non-pandemic defunct EMS calls and pandemic defunct EMS calls.
+
+``` {r defunct ts}
+defunct_calls_pandemic_removed_ts <- ts(ts.df$defunct_calls_pandemic_removed_ts, start = first_day)
+Pandemic_defunct_calls_ts <- ts(ts.df$Pandemic_defunct_calls_ts, start = first_day)
+```
+
+Time series of non-pandemic EMS calls and pandemic EMS calls.
+
+``` {r effect ts}
+Incidents_pandemic_removed_ts <- ts(ts.df$Incidents_pandemic_removed_ts, start = first_day)
+Pandemic_effect_ts <- ts(ts.df$Pandemic_effect_ts, start = first_day)
+```
+
+Time series of daily Covid-19 hospitalization data.
+
+``` {r hospitalisation_ts}
+hospitalisation_ts <- ts(ts.df$hospitalisation_ts, start = first_day)
+```
+
+Create smoothed time series.
+
+``` {r ts smooth}
+library(changepoint.np)
+library(tseries)
+library(MTS)
+library(ppcor)
+
+last_day_int <- as.numeric(last_day - first_day) + 1
+first_day_int <- 7
+
+# start is the start day of the smoothing, it is also used as an averaging denominator
+# end is the last day of the data
+smooth_ts <- function(data, start, end){
+  smoothed_data_ts <- c()
+  for (i in start:end){
+    begin = i - start + 1
+    smoothed_data_ts <- c(smoothed_data_ts,mean(data[c(begin: (begin + start - 1))]))
+  }
+  for (j in start - 2:ceiling(start/2)){
+    begin = end - j
+    smoothed_data_ts <- c(smoothed_data_ts,mean(data[c(begin : end)]))
+  }
+  return(ts(smoothed_data_ts, start = first_day + floor(start/2)))
+}
+
+smoothed_Incidents_pandemic_removed_ts <- smooth_ts(Incidents_pandemic_removed_ts, start = first_day_int, end = last_day_int)
+smoothed_Pandemic_effect_ts <- smooth_ts(Pandemic_effect_ts, start = first_day_int, end = last_day_int)
+
+smoothed_defunct_calls_pandemic_removed_ts <- smooth_ts(defunct_calls_pandemic_removed_ts, start = first_day_int, end = last_day_int)
+smoothed_Pandemic_defunct_calls_ts <- smooth_ts(Pandemic_defunct_calls_ts, start = first_day_int, end = last_day_int)
+
+smoothed_hospitalisation_ts <- smooth_ts(hospitalisation_ts, start = first_day_int, end = last_day_int)
+```
+
+## Impact of the pandemic
+
+Change point detection on non-pandemic incident time series.
+
+```{r cp_detection comparison}
+tt <- time(Incidents_pandemic_removed_ts)
+fmt <- "%m-%d-%y" # format for axis labels
+raw.man=cpt.meanvar(Incidents_pandemic_removed_ts,method='BinSeg',penalty='BIC',test.stat='Normal', Q = 2)
+first_day + cpts(raw.man) - 1
+
+## Comparing with other penalty types and methods
+for (penalty_ in c('BIC', 'SIC', 'MBIC', 'AIC')){
+  raw.man1=cpt.meanvar(Incidents_pandemic_removed_ts,method='BinSeg',penalty=penalty_,
+                       pen.value=c(log(length(Incidents_pandemic_removed_ts)),100*log(length(Incidents_pandemic_removed_ts))), test.stat='Normal', Q = 10)
+  print(first_day + cpts(raw.man1) - 1)
+}
+
+for (penalty_ in c('BIC', 'SIC', 'MBIC', 'AIC')){
+  raw.man1=cpt.meanvar(Incidents_pandemic_removed_ts,method='PELT',penalty=penalty_, test.stat='Normal')
+
+  print(first_day + cpts(raw.man1) - 1)
+}
+
+for (penalty_ in c('BIC', 'SIC', 'MBIC', 'AIC')){
+  raw.man1=cpt.var(Incidents_pandemic_removed_ts,method='PELT',penalty=penalty_, test.stat='Normal')
+
+  print(first_day + cpts(raw.man1) - 1)
+}
+
+```
+
+Change point statistics and time series plot
+
+```{r cp_detection stats and plot}
+param.est(raw.man)
+print("Standard Deviation")
+sqrt(param.est(raw.man)$variance)
+print("Change point Dates")
+first_day + cpts(raw.man) - 1
+labs <- format(as.Date(tt[cpts(raw.man)]), fmt)
+plot(raw.man,cpt.width=3, ylab = "Daily Frequency", xaxt ="n", main = "Non-Pandemic EMS Incidents", xlab = "")
+axis(side = 1, at = tt[cpts(raw.man)], labels = labs,  cex.axis = 0.5)
+param.est(raw.man)$mean[3]/param.est(raw.man)$mean[1]
+
+
+plot(Incidents_pandemic_removed_ts, xaxt ="n", ylim = c(0, 350), ylab = "Daily Frequency", 
+     col = alpha("black", 0.2))
+lines(smoothed_Incidents_pandemic_removed_ts, col = "black")
+lines(defunct_calls_pandemic_removed_ts,col = alpha("orange", 0.2))
+lines(smoothed_defunct_calls_pandemic_removed_ts, col = "orange")
+lines(Pandemic_effect_ts,col = alpha("red", 0.2))
+lines(smoothed_Pandemic_effect_ts, col = "red")
+lines(Pandemic_defunct_calls_ts,col = alpha("brown", 0.2))
+lines(smoothed_Pandemic_defunct_calls_ts, col = "brown")
+lines(hospitalisation_ts, col = alpha("green", 0.2))
+lines(smoothed_hospitalisation_ts, col = "green")
+tt <- time(Incidents_pandemic_removed_ts)
+for (i in tt[cpts(raw.man)]){
+  abline(v=i, col="purple", lwd=2)
+}
+ix <- seq(1, length(tt), by=50)
+fmt <- "%m-%d-%y" # format for axis labels
+labs <- format(as.Date(tt[cpts(raw.man)]), fmt)
+axis(side = 1, at = tt[cpts(raw.man)], labels = labs, cex.axis = 0.5)
+legend("topleft", legend=c("Pandemic Effect", "Pandemic Defunct", "Non-pandemic Defunct"),
+       col=c("red", "brown","orange"),lty=1, cex=0.8)
+legend("topright", legend=c("Hospitalization", "Non-pandemic Effect"),
+       col=c("green", "black"),lty=1, cex=0.8)
+```
+
+Comparison of number of Non-Pandemic Defunct EMS incidents per day among Period 1 (before March 17th), Period 2 (March 18th - May 12th), Period 3 (after May 13th). (Table 4 in the paper.)
+
+``` {r }
+print("Change points")
+cpts(raw.man)
+
+print("n of period 2 and 3")
+length(defunct_calls_pandemic_removed_ts[(cpts(raw.man)[1] + 1):(cpts(raw.man)[2] - 1)])
+length(defunct_calls_pandemic_removed_ts[cpts(raw.man)[2]:last_day_int])
+
+print("Mean: period 1, 2 and 3")
+mean(defunct_calls_pandemic_removed_ts[1:cpts(raw.man)[1]])
+mean(defunct_calls_pandemic_removed_ts[(cpts(raw.man)[1] + 1):(cpts(raw.man)[2] - 1)])
+mean(defunct_calls_pandemic_removed_ts[cpts(raw.man)[2]:last_day_int])
+
+print("sd: period 1, 2 and 3")
+sd(defunct_calls_pandemic_removed_ts[1:cpts(raw.man)[1]])
+sd(defunct_calls_pandemic_removed_ts[(cpts(raw.man)[1] + 1):(cpts(raw.man)[2] - 1)])
+sd(defunct_calls_pandemic_removed_ts[cpts(raw.man)[2]:last_day_int])
+
+print("Proportion of nonpandemic defunct calls pre (period 1) and post covid(period 3)")
+sum(defunct_calls_pandemic_removed_ts[1:442]) / sum(Incidents_pandemic_removed_ts[1:442] + defunct_calls_pandemic_removed_ts[1:442])
+sum(defunct_calls_pandemic_removed_ts[499:last_day_int]) / sum(Incidents_pandemic_removed_ts[499:last_day_int] + defunct_calls_pandemic_removed_ts[499:last_day_int])
+
+mean(defunct_calls_pandemic_removed_ts[1:442] / (Incidents_pandemic_removed_ts[1:442] + defunct_calls_pandemic_removed_ts[1:442]))
+mean(defunct_calls_pandemic_removed_ts[499:last_day_int] / (Incidents_pandemic_removed_ts[499:last_day_int] + defunct_calls_pandemic_removed_ts[499:last_day_int]))
+```
+
+Major problems impacted by the pandemic.
+
+``` {r problems impacted by the pandemic}
+problem_ts <- function(data){
+  to_daily_ts <- c()
+  for (i in first_day:last_day){
+    subset <- as.Date(data$Time_PhonePickUp_Date) == as.Date(i)
+    data = data[!subset,]
+    to_daily_ts <- c(to_daily_ts, sum(subset))
+  }
+  return(to_daily_ts)
+}
+
+problem_TS_Plot <- function(Problem_Type){
+  
+  Problem_DF <- data.frame()
+  
+  for (problem in Problem_Type){
+    data <- Incidents[Incidents$Problem %in% problem,]
+    df <- data.frame(problem_ts(data))
+    colnames(df) <- "Daily_Count"
+    df$Problem_Type <- problem
+    Problem_DF <- rbind(Problem_DF, df)
+  }
+
+  return(Problem_DF)
+}
+
+Problem_DF <- problem_TS_Plot(Problem_Highest_Freq$Problem_Type)
+
+for (problem in Problem_Highest_Freq$Problem_Type){
+  data <- Problem_DF[Problem_DF$Problem_Type == problem,]$Daily_Count
+  before <- data[1:cpts(raw.man)[1]]
+  mid <- data[(cpts(raw.man)[1] + 1): (cpts(raw.man)[2] - 1)]
+  after <- data[cpts(raw.man)[2]:last_day_int]
+  print(problem)
+  print(t.test(before, after, alternative = "greater"))
+  print(mean(mid))
+}
+```
+
+## Response Time Analysis
+
+Impact of the pandemic on response time.
+
+``` {r Service Time Distribution COVID}
+pre_mid_post_service_time <- function(condition, data, maxtime, title){
+  precovid <- data[condition$Time_PhonePickUp_Date <= as.Date("2020-03-17")]
+
+  midcovid <- data[condition$Time_PhonePickUp_Date > as.Date("2020-03-17") & condition$Time_PhonePickUp_Date < as.Date("2020-05-13")]
+
+  postcovid <- data[condition$Time_PhonePickUp_Date >= as.Date("2020-05-13")]
+
+print(summary(precovid))
+print(summary(midcovid))
+print(summary(postcovid))
+
+hist(precovid, xlim = c(0,maxtime), breaks = max(precovid)*20, xlab = "Period 1", main = title)
+abline(v=mean(precovid), col="purple", lwd=2)
+abline(v=median(precovid), col="blue", lwd=2, lty = 2)
+
+hist(midcovid, xlim = c(0,maxtime), breaks = max(midcovid)*20, xlab = "Period 2", main = "")
+abline(v=mean(midcovid), col="purple", lwd=2)
+abline(v=median(midcovid), col="blue", lwd=2, lty = 2)
+
+print(t.test(precovid, midcovid, alternative = "less"))
+
+hist(postcovid, xlim = c(0,maxtime), breaks = max(postcovid)*20, xlab = "Period 3", main = "")
+abline(v=mean(postcovid), col="purple", lwd=2)
+abline(v=median(postcovid), col="blue", lwd=2, lty = 2)
+
+print(t.test(precovid, postcovid, alternative = "less"))
+}
+
+par(mfcol=c(3,3))
+
+Incidents_assigned <- Incidents[Incidents$Time_First_Unit_Assigned >= 0 & !is.na(Incidents$Time_First_Unit_Assigned),]
+Incidents_assigned$Time_PhonePickUp_Date <- as.Date(Incidents_assigned$Time_PhonePickUp_Date)
+
+pre_mid_post_service_time(Incidents_assigned, Incidents_assigned$Time_First_Unit_Assigned, 4, "Assignment Time (minutes)")
+
+Incidents_Enroute <- Incidents[Incidents$Time_First_Unit_Enroute >= 0 &!is.na(Incidents$Time_First_Unit_Enroute),]
+Incidents_Enroute$Time_PhonePickUp_Date <- as.Date(Incidents_Enroute$Time_PhonePickUp_Date)
+
+pre_mid_post_service_time(Incidents_Enroute, Incidents_Enroute$Time_First_Unit_Enroute, 4, "Dispatch Time (minutes)")
+
+Incidents_Arrived <- Incidents[Incidents$Time_First_Unit_Arrived >= 0 & !is.na(Incidents$Time_First_Unit_Arrived),]
+Incidents_Arrived$Time_PhonePickUp_Date <- as.Date(Incidents_Arrived$Time_PhonePickUp_Date)
+pre_mid_post_service_time(Incidents_Arrived, Incidents_Arrived$Time_First_Unit_Arrived, 15, "Arrival Time (minutes)")
+
+```
+
+## Predictive Model Training
+
+Hospitalisation data change point detection.
+
+```{r hospitalisation cp}
+raw.man=cpt.var(hospitalisation_ts,method='PELT',penalty='MBIC',test.stat='Normal')
+first_day + cpts(raw.man) - 1 
+
+## Comparing with other penalty types and methods
+for (penalty_ in c('BIC', 'SIC', 'MBIC', 'AIC')){
+  raw.man1=cpt.var(hospitalisation_ts,method='PELT', penalty=penalty_,test.stat='Normal')
+  print(first_day + cpts(raw.man1) - 1)
+}
+
+for (penalty_ in c('BIC', 'SIC', 'MBIC', 'AIC')){
+  raw.man1=cpt.meanvar(hospitalisation_ts,method='BinSeg',penalty=penalty_, pen.value=c(log(length(hospitalisation_ts)),100*log(length(hospitalisation_ts))), test.stat='Normal', Q = 10)
+  print(first_day + cpts(raw.man1) - 1)
+}
+
+for (penalty_ in c('BIC', 'SIC', 'MBIC', 'AIC')){
+  raw.man1=cpt.var(hospitalisation_ts,method='BinSeg',penalty=penalty_, pen.value=c(log(length(hospitalisation_ts)),100*log(length(hospitalisation_ts))), test.stat='Normal', Q = 10)
+  print(first_day + cpts(raw.man1) - 1)
+}
+```
+
+Plots and statistics of hospitalisation data change point detection.
+
+``` {r hospitalisation cp plots}
+tt <- time(hospitalisation_ts)
+ix <- seq(1, length(tt), by=50)
+fmt <- "%m-%d-%y" # format for axis labels
+labs <- format(as.Date(tt[ix]), fmt)
+
+plot(smoothed_hospitalisation_ts, col = "green", ylab = "Daily Count", xaxt ="n", main = "Hospitalization", xlab = "", xlim = first_day + c(420, last_day_int), ylim = c(0, 100))
+lines(ts(hospitalisation_ts[1:last_day_int], start = first_day), col = alpha("green", 0.3))
+axis(side = 1, at = tt[ix], labels = labs,  cex.axis = 0.5)
+lines(Pandemic_effect_ts,col = alpha("red", 0.2))
+lines(smoothed_Pandemic_effect_ts, col = "red")
+lines(Pandemic_defunct_calls_ts,col = alpha("brown", 0.2))
+lines(smoothed_Pandemic_defunct_calls_ts, col = "brown")
+legend("topleft", legend=c("Pandemic Effect", "Pandemic Defunct", "Hospitalization"),
+       col=c("black", "brown", "green"),lty=1, cex=0.8)
+
+print("Change point Dates")
+first_day + cpts(raw.man) - 1 
+param.est(raw.man)
+labs <- format(as.Date(tt[cpts(raw.man)]), fmt)
+
+plot(smoothed_hospitalisation_ts, col = "green", ylab = "Daily Count", xaxt ="n", main = "Hospitalization", xlab = "", xlim = first_day + c(420, last_day_int), ylim = c(0, 100))
+lines(ts(hospitalisation_ts[1:last_day_int], start = first_day), col = alpha("green", 0.3))
+axis(side = 1, at = tt[cpts(raw.man)], labels = labs,  cex.axis = 0.5)
+#lines(Pandemic_effect_ts,col = alpha("red", 0.2))
+#lines(smooth_ts(Pandemic_effect_ts, start = 7, end = last_day_int), col = "red")
+#lines(Pandemic_defunct_calls_ts,col = alpha("brown", 0.2))
+#lines(smooth_ts(Pandemic_defunct_calls_ts, start = 7, end = last_day_int), col = "brown")
+for (i in tt[cpts(raw.man)]){
+  abline(v=i, col="purple", lwd=2)
+}
+legend("topleft", legend=c("Hospitalization"),
+       col=c("green"),lty=1, cex=0.8)
+```
+
+Add dummy variables to incorporate change points.
+
+``` {r plain arima data processing}
+smoothed_last_idx <- length(smoothed_hospitalisation_ts)
+
+smoothed_hospitalisation_df <- data.frame(c(smoothed_hospitalisation_ts[(465 - floor(7/2)):smoothed_last_idx]), 
+                                          c(rep(1, cpts(raw.man)[2] - (464 - floor(7/2))), rep(0, smoothed_last_idx - cpts(raw.man)[2])), 
+                                          c(rep(0, cpts(raw.man)[2] - (464 - floor(7/2))), rep(1, cpts(raw.man)[3] - cpts(raw.man)[2]), rep(0, smoothed_last_idx- cpts(raw.man)[3])), 
+                                          c(rep(0, cpts(raw.man)[3] - (464 - floor(7/2))), rep(1, cpts(raw.man)[4] - cpts(raw.man)[3]), rep(0, smoothed_last_idx - cpts(raw.man)[4])))
+colnames(smoothed_hospitalisation_df) <- c("hosp_ts", "first", "second", "third")
+smoothed_hospitalisation_df <- as.matrix(smoothed_hospitalisation_df)
+
+MDF <- data.frame(Pandemic_effect_ts[465:last_day_int], smoothed_hospitalisation_df)
+colnames(MDF) <- c("Pandemic", "hosp_ts", "first", "second", "third")
+```
+
+Model Fitting: with and without change points.
+
+``` {r model fitting}
+library(forecast)
+xreg <- as.matrix(MDF[,c("hosp_ts", "first", "second", "third")])
+auto.arima(MDF$Pandemic, xreg = xreg, approximation = FALSE, stepwise = FALSE)
+
+library(caTools)
+set.seed(1)
+data1= sample.split(MDF,SplitRatio = 0.8)
+train = subset(MDF,data1==TRUE)
+test = subset(MDF,data1==FALSE)
+
+print("With change points")
+fit.with_cp <- lm(Pandemic ~ hosp_ts + first + second + third, data = train)
+summary(fit.with_cp)
+plot(fit.with_cp)
+
+print("MSE")
+mean((predict(fit.with_cp, newdata = test)-test$Pandemic)^2)
+print("Test Residual standard error")
+sd(predict(fit.with_cp, newdata = test)-test$Pandemic)
+
+print("Without change points")
+fit.without_cp <- lm(Pandemic ~ hosp_ts, data = train)
+summary(fit.without_cp)
+plot(fit.without_cp)
+print("MSE")
+mean((predict(fit.without_cp, newdata = test)-test$Pandemic)^2)
+print("Test Residual standard error")
+sd(predict(fit.without_cp, newdata = test)-test$Pandemic)
+```
+
+Plot prediction interval.
+
+``` {r }
+y <- data.frame(predict(fit.with_cp, newdata = MDF, interval = "prediction"))
+x <- 1:nrow(y)
+plot(y$fit, type = "l", xaxt ="n", ylim = c(0, 70), lwd = 2, col = "blue", ylab = "Daily Frequency", xlab = "")
+lines(MDF$Pandemic, type = "l", col = alpha("red"))
+axis(side = 1, at = cpts(raw.man) - 465, labels = labs,  cex.axis = 1)
+legend("topright", legend=c("predicted", "actual"),
+       col=c("blue", "red"),lty=1, cex=0.8)
+  CI.x.top <- rev(x) # x values going forward
+  CI.x.bot <- x # x values backwards
+  CI.x <- c(CI.x.top, CI.x.bot)
+
+  CI.y.top <- rev(y$upr) # x values going forward
+  CI.y.bot <- y$lwr # x values backwards
+  CI.y <- c(CI.y.top, CI.y.bot)
+
+  CI.col <- adjustcolor("blue",alpha.f=0.25) # Pick a pretty CI color
+  polygon(CI.x, CI.y, col=CI.col, border=NA)
+```
+
+Obtain $r^2$ valude on smoothed data
+
+``` {r r squared}
+temp_data = data.frame(smoothed_Pandemic_effect_ts[462:(462 + nrow(MDF)-1)], smoothed_hospitalisation_df[1:nrow(MDF),])
+colnames(temp_data) <- c("Pandemic", "hosp_ts", "first", "second", "third")
+train = subset(temp_data,data1==TRUE)
+test = subset(temp_data,data1==FALSE)
+
+get_rsq <- function(data, model){
+  rss <- sum((predict(model, newdata = data) - data$Pandemic) ^ 2)  ## residual sum of squares
+  tss <- sum((data$Pandemic - mean(data$Pandemic)) ^ 2)  ## total sum of squares
+  rsq <- 1 - rss/tss
+  return(rsq)
+}
+
+print("With changepoint")
+print("train R squared")
+get_rsq(train, fit.with_cp)
+print("test R squared")
+get_rsq(test, fit.with_cp)
+
+print("Without changepoint")
+print("train R squared")
+get_rsq(train, fit.without_cp)
+print("test R squared")
+get_rsq(test, fit.without_cp)
+```
