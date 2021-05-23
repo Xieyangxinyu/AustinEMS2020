@@ -3,13 +3,13 @@ Predicting Covid-19 EMS Incidents from Daily Hospitalization Trends
 Ngoc Mai Tran, Evdokia Nikolova, David Kulpanowski, Yangxinyu Xie,
 Joshua Ong
 
-Introduction: The aim of our retrospective study was to quantify the impact of Covid-19 on the spatiotempo- ral distribution of Emergency Medical Services (EMS) demand in Travis County, Austin, Texas and propose a robust model to forecast Covid-19 EMS incidents.
+Introduction: The aim of our retrospective study was to quantify the impact of Covid-19 on the temporal distribution of Emergency Medical Services (EMS) demand in Travis County, Austin, Texas and propose a robust model to forecast Covid-19 EMS incidents.
 
-Methods: We analyzed the temporal distribution of EMS calls in the Austin-Travis County area between January 1st, 2019 and December 31st, 2020. Change point detection was performed to identify critical dates marking changes in EMS call distributions and time series regression was applied for our prediction model. 
+Methods: We analyzed the temporal distribution of EMS calls in the Austin-Travis County area between January 1st, 2019 and December 31st, 2020. Change point detection was performed to identify critical dates marking changes in EMS call distributions and time series regression was applied for forecasting Covid-19 EMS incidents.
 
-Results: Two critical dates mark the impact of Covid-19 on EMS calls: March 17th, when the daily number of non-pandemic EMS incidents dropped significantly, and May 13th, by which the daily number of EMS calls climbed back to 75% of pre-Covid-19 demand. New daily count of the hospitalization of Covid-19 patients alone proves a powerful predictor of pandemic EMS calls, with an $$r^2$$ value equal to 0.85. 
+Results: Two critical dates marked the impact of Covid-19 on the distribution of EMS calls: March 17th, when the daily number of non-pandemic EMS incidents dropped significantly, and May 13th, by which the daily number of EMS calls climbed back to 75% of the number in pre-Covid-19 time. New daily count of the hospitalization of Covid-19 patients alone proves a powerful predictor of the number of pandemic EMS calls, with an r2 value equal to 0.85. In particular, for every 2.5 cases where EMS takes a Covid-19 patient to a hospital, 1 person is admitted.
 
-Conclusion: The mean daily number of non-pandemic EMS demand was significantly less than the period prior to Covid-19 pandemic. The number of EMS calls for Covid-19 symptoms can be predicted from the daily new hospitalization of Covid-19 patients. In particular, for every 2.5 cases where EMS takes a Covid-19 patient to a hospital, 1 person is admitted.
+Conclusion: The mean daily number of non-pandemic EMS demand was significantly less than the period prior to Covid-19 pandemic. The number of EMS calls for Covid-19 symptoms can be predicted from the daily new hospitalization of Covid-19 patients. These findings may be of interest to EMS departments as they plan for future pandemics, including the ability to predict pandemic-related calls in an effort to adjust a targeted response.
 
 ## Load Incident Data
 
