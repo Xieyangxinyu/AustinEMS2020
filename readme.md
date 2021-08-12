@@ -1,27 +1,23 @@
 Predicting Covid-19 EMS Incidents from Daily Hospitalization Trends
 ================
-Ngoc Mai Tran, Evdokia Nikolova, David Kulpanowski, Yangxinyu Xie,
-Joshua Ong
+Yangxinyu Xie, David Kulpanowski, Joshua Ong, Evdokia Nikolova, Ngoc Mai Tran
 
-Introduction: The aim of our retrospective study was to quantify the impact of Covid-19 on the temporal distribution of Emergency Medical Services (EMS) demand in Travis County, Austin, Texas and propose a robust model to forecast Covid-19 EMS incidents.
+Introduction: The aim of our retrospective study was to quantify the impact of Covid-19 on the temporal distribution of Emergency Medical Services (EMS) demand in Travis County, Austin, Texas, and propose a robust model to forecast Covid-19 EMS incidents.
 
-Methods: We analyzed the temporal distribution of EMS calls in the Austin-Travis County area between January 1st, 2019 and December 31st, 2020. Change point detection was performed to identify critical dates marking changes in EMS call distributions and time series regression was applied for forecasting Covid-19 EMS incidents.
+Methods: We analyzed the temporal distribution of EMS calls in the Austin-Travis County area between January 1st, 2019, and December 31st, 2020. Change point detection was performed to identify critical dates marking changes in EMS call distributions, and time series regression was applied for forecasting Covid-19 EMS incidents.
 
-Results: Two critical dates marked the impact of Covid-19 on the distribution of EMS calls: March 17th, when the daily number of non-pandemic EMS incidents dropped significantly, and May 13th, by which the daily number of EMS calls climbed back to 75% of the number in pre-Covid-19 time. New daily count of the hospitalization of Covid-19 patients alone proves a powerful predictor of the number of pandemic EMS calls, with an r2 value equal to 0.85. In particular, for every 2.5 cases where EMS takes a Covid-19 patient to a hospital, 1 person is admitted.
+Results: Two critical dates marked the impact of Covid-19 on the distribution of EMS calls: March 17th, when the daily number of non-pandemic EMS incidents dropped significantly, and May 13th, by which the daily number of EMS calls climbed back to 75\% of the number in pre-Covid-19 time. The new daily count of the hospitalization of Covid-19 patients alone proves a powerful predictor of the number of pandemic EMS calls, with an $$r^2$$ value equal to 0.85. In particular, for every 2.5 cases where EMS takes a Covid-19 patient to a hospital, one person is admitted.
 
-Conclusion: The mean daily number of non-pandemic EMS demand was significantly less than the period prior to Covid-19 pandemic. The number of EMS calls for Covid-19 symptoms can be predicted from the daily new hospitalization of Covid-19 patients. These findings may be of interest to EMS departments as they plan for future pandemics, including the ability to predict pandemic-related calls in an effort to adjust a targeted response.
+Conclusion: The mean daily number of non-pandemic EMS demand was significantly less than the period before Covid-19 pandemic. The number of EMS calls for Covid-19 symptoms can be predicted from the daily new hospitalization of Covid-19 patients. These findings may be of interest to EMS departments as they plan for future pandemics, including the ability to predict pandemic-related calls in an effort to adjust a targeted response. 
 
 ## Load Incident Data
 
 ``` r
-setwd("~/Desktop/ems/data/final")
+setwd("~/Desktop/ems/data/final/")
 rm(list = ls())
 Incidents <- read.csv("Incidents2019_2020.csv")
 ts.df <- read.csv("ts_2019_2020.csv")
-nrow(Incidents)
 ```
-
-    ## [1] 246809
 
 ## Basic Data Description
 
@@ -148,7 +144,56 @@ sum(Problem_Highest_Freq$Count)/nrow(Incidents)
 
     ## [1] 0.8849394
 
-Response time histogram
+Priority
+
+``` r
+ggplot(Incidents, aes(x=as.factor(Priority_Number), fill = Priority_Number)) + 
+  geom_bar(stat = "count") + scale_fill_gradient2(midpoint = 6, low="red", mid = "white", high="light blue") +
+  geom_text(stat='count', aes(label=..count..), hjust=0.2, size=3.5) + 
+  scale_x_discrete(limits = rev) + coord_flip() + 
+  xlab("Priority Number") + ylab("Count") + theme(legend.position = "none")
+```
+
+![](script_files/figure-gfm/priority-1.png)<!-- -->
+
+``` r
+print("Proportion of high priority")
+```
+
+    ## [1] "Proportion of high priority"
+
+``` r
+mean(Incidents$Priority_Number <= 2)
+```
+
+    ## [1] 0.2983967
+
+``` r
+print("Proportion of mid priority")
+```
+
+    ## [1] "Proportion of mid priority"
+
+``` r
+mean(Incidents$Priority_Number == 3 | Incidents$Priority_Number == 4)
+```
+
+    ## [1] 0.4081577
+
+``` r
+print("Proportion of low priority")
+```
+
+    ## [1] "Proportion of low priority"
+
+``` r
+mean(Incidents$Priority_Number >= 5)
+```
+
+    ## [1] 0.2934455
+
+Response time
+histogram
 
 ``` r
 Incidents_assigned <- Incidents[Incidents$Time_First_Unit_Assigned >= 0 & !is.na(Incidents$Time_First_Unit_Assigned),]$Time_First_Unit_Assigned
@@ -159,6 +204,12 @@ Incidents_Arrived <- Incidents[Incidents$Time_First_Unit_Arrived >= 0 & !is.na(I
 
 par(mfrow=c(3,1))
 
+length(Incidents_Enroute)
+```
+
+    ## [1] 244372
+
+``` r
 hist(Incidents_assigned, xlim = c(0,5), breaks = max(Incidents_assigned)*20, xlab = "Assignment Time (minutes)", main = "")
 legend("topright", legend=c("mean", "median"),
        col=c("blue", "purple"), lty = 1:2, cex=0.8)
@@ -566,7 +617,8 @@ defunct_calls_pandemic_removed_ts <- ts(ts.df$defunct_calls_pandemic_removed_ts,
 Pandemic_defunct_calls_ts <- ts(ts.df$Pandemic_defunct_calls_ts, start = first_day)
 ```
 
-Time series of non-pandemic EMS calls and pandemic EMS calls.
+Time series of non-pandemic EMS calls and pandemic EMS
+calls.
 
 ``` r
 Incidents_pandemic_removed_ts <- ts(ts.df$Incidents_pandemic_removed_ts, start = first_day)
@@ -829,7 +881,8 @@ legend("topright", legend=c("Hospitalization", "Non-pandemic Effect"),
 
 Comparison of number of Non-Pandemic Defunct EMS incidents per day among
 Period 1 (before March 17th), Period 2 (March 18th - May 12th), Period 3
-(after May 13th). (Table 4 in the paper.)
+(after May 13th). (Table 4 in the
+paper.)
 
 ``` r
 print("Change points")
@@ -1291,7 +1344,7 @@ for (problem in Problem_Highest_Freq$Problem_Type){
 
 ## Response Time Analysis
 
-Impact of the pandemic on response time.
+Impact of the pandemic on average response time.
 
 ``` r
 pre_mid_post_service_time <- function(condition, data, maxtime, title){
@@ -1300,10 +1353,13 @@ pre_mid_post_service_time <- function(condition, data, maxtime, title){
   midcovid <- data[condition$Time_PhonePickUp_Date > as.Date("2020-03-17") & condition$Time_PhonePickUp_Date < as.Date("2020-05-13")]
 
   postcovid <- data[condition$Time_PhonePickUp_Date >= as.Date("2020-05-13")]
-
-print(summary(precovid))
-print(summary(midcovid))
-print(summary(postcovid))
+  
+  print("Period 1")
+  print(summary(precovid))
+  print("Period 2")
+  print(summary(midcovid))
+  print("Period 3")
+  print(summary(postcovid))
 
 hist(precovid, xlim = c(0,maxtime), breaks = max(precovid)*20, xlab = "Period 1", main = title)
 abline(v=mean(precovid), col="purple", lwd=2)
@@ -1330,10 +1386,13 @@ Incidents_assigned$Time_PhonePickUp_Date <- as.Date(Incidents_assigned$Time_Phon
 pre_mid_post_service_time(Incidents_assigned, Incidents_assigned$Time_First_Unit_Assigned, 4, "Assignment Time (minutes)")
 ```
 
+    ## [1] "Period 1"
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   0.000   0.700   1.017   1.180   1.417  61.533 
+    ## [1] "Period 2"
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##  0.0000  0.7833  1.1167  1.3254  1.5500 31.8833 
+    ## [1] "Period 3"
     ##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
     ##   0.0000   0.7333   1.0500   1.2461   1.4667 129.0000
 
@@ -1368,10 +1427,13 @@ Incidents_Enroute$Time_PhonePickUp_Date <- as.Date(Incidents_Enroute$Time_PhoneP
 pre_mid_post_service_time(Incidents_Enroute, Incidents_Enroute$Time_First_Unit_Enroute, 4, "Dispatch Time (minutes)")
 ```
 
+    ## [1] "Period 1"
     ##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
     ##   0.0000   0.3667   1.0000   1.0133   1.3833 564.3167 
+    ## [1] "Period 2"
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   0.000   0.700   1.100   1.082   1.433  39.450 
+    ## [1] "Period 3"
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   0.000   0.650   1.100   1.109   1.450 402.667
 
@@ -1405,10 +1467,13 @@ Incidents_Arrived$Time_PhonePickUp_Date <- as.Date(Incidents_Arrived$Time_PhoneP
 pre_mid_post_service_time(Incidents_Arrived, Incidents_Arrived$Time_First_Unit_Arrived, 15, "Arrival Time (minutes)")
 ```
 
+    ## [1] "Period 1"
     ##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
     ##    0.000    4.033    5.867    6.875    8.333 1450.433 
+    ## [1] "Period 2"
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ##   0.000   4.433   6.400   7.515   9.083 143.267 
+    ## [1] "Period 3"
     ##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
     ##    0.000    4.550    6.550    7.606    9.167 1446.933
 
@@ -1438,9 +1503,79 @@ pre_mid_post_service_time(Incidents_Arrived, Incidents_Arrived$Time_First_Unit_A
     ## mean of x mean of y 
     ##  6.875384  7.605696
 
+Impact of the pandemic on response time for high priority incidents.
+
+``` r
+high_priority_proportion <- function(data){
+  overall_len = nrow(data)
+  data = data[data$Priority_Number <= 2,]
+  print("Frequncy of High Priority Incidents:")
+  print(nrow(data))
+  print("Frequncy of High Priority Incidents with less than 5 min response time:")
+  print(sum(data$Time_First_Unit_Arrived <= 5))
+  return(data$Time_First_Unit_Arrived <= 5)
+}
+
+pre_mid_post_high_priority_service_time <- function(data){
+  print("Period 1")
+  precovid <- high_priority_proportion(data[data$Time_PhonePickUp_Date <= as.Date("2020-03-17"),])
+  print("Proportion of High Priority Incidents whose response time is less than 5 min:")
+  print(mean(precovid))
+  
+  print("Period 2")
+  midcovid <- high_priority_proportion(data[data$Time_PhonePickUp_Date > as.Date("2020-03-17") & data$Time_PhonePickUp_Date < as.Date("2020-05-13"),])
+  print("Proportion of High Priority Incidents whose response time is less than 5 min:")
+  print(mean(midcovid))
+
+  print("Period 3")
+  postcovid <- high_priority_proportion(data[data$Time_PhonePickUp_Date >= as.Date("2020-05-13"),])
+  
+  print("Proportion of High Priority Incidents whose response time is less than 5 min:")
+  print(mean(postcovid))
+
+  print(t.test(precovid, postcovid, alternative = "greater"))
+}
+
+pre_mid_post_high_priority_service_time(Incidents_Arrived)
+```
+
+    ## [1] "Period 1"
+    ## [1] "Frequncy of High Priority Incidents:"
+    ## [1] 44790
+    ## [1] "Frequncy of High Priority Incidents with less than 5 min response time:"
+    ## [1] 20023
+    ## [1] "Proportion of High Priority Incidents whose response time is less than 5 min:"
+    ## [1] 0.4470418
+    ## [1] "Period 2"
+    ## [1] "Frequncy of High Priority Incidents:"
+    ## [1] 4823
+    ## [1] "Frequncy of High Priority Incidents with less than 5 min response time:"
+    ## [1] 1671
+    ## [1] "Proportion of High Priority Incidents whose response time is less than 5 min:"
+    ## [1] 0.3464649
+    ## [1] "Period 3"
+    ## [1] "Frequncy of High Priority Incidents:"
+    ## [1] 20402
+    ## [1] "Frequncy of High Priority Incidents with less than 5 min response time:"
+    ## [1] 6854
+    ## [1] "Proportion of High Priority Incidents whose response time is less than 5 min:"
+    ## [1] 0.3359475
+    ## 
+    ##  Welch Two Sample t-test
+    ## 
+    ## data:  precovid and postcovid
+    ## t = 27.388, df = 41389, p-value < 2.2e-16
+    ## alternative hypothesis: true difference in means is greater than 0
+    ## 95 percent confidence interval:
+    ##  0.104422      Inf
+    ## sample estimates:
+    ## mean of x mean of y 
+    ## 0.4470418 0.3359475
+
 ## Predictive Model Training
 
-Hospitalisation data change point detection.
+Hospitalisation data change point
+detection.
 
 ``` r
 raw.man=cpt.var(hospitalisation_ts,method='PELT',penalty='MBIC',test.stat='Normal')
@@ -1621,6 +1756,11 @@ auto.arima(MDF$Pandemic, xreg = xreg, approximation = FALSE, stepwise = FALSE)
 
 ``` r
 library(caTools)
+```
+
+    ## Warning: package 'caTools' was built under R version 3.6.2
+
+``` r
 set.seed(1)
 data1= sample.split(MDF,SplitRatio = 0.8)
 train = subset(MDF,data1==TRUE)
@@ -1748,7 +1888,8 @@ sd(predict(fit.without_cp, newdata = test)-test$Pandemic)
 
     ## [1] 6.419673
 
-Plot prediction interval.
+Plot prediction
+interval.
 
 ``` r
 y <- data.frame(predict(fit.with_cp, newdata = MDF, interval = "prediction"))
@@ -1772,7 +1913,8 @@ legend("topright", legend=c("predicted", "actual"),
 
 ![](script_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
 
-Obtain *r*<sup>2</sup> valude on smoothed data
+Obtain \(r^2\) valude on smoothed
+data
 
 ``` r
 temp_data = data.frame(smoothed_Pandemic_effect_ts[462:(462 + nrow(MDF)-1)], smoothed_hospitalisation_df[1:nrow(MDF),])

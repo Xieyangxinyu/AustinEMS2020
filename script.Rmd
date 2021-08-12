@@ -7,11 +7,10 @@ output: github_document
 ## Load Incident Data
 
 ```{r load}
-setwd("~/Desktop/ems/data/final")
+setwd("~/Desktop/ems/data/final/")
 rm(list = ls())
 Incidents <- read.csv("Incidents2019_2020.csv")
 ts.df <- read.csv("ts_2019_2020.csv")
-nrow(Incidents)
 ```
 
 ## Basic Data Description
@@ -113,6 +112,23 @@ print("Proportion of the major problems")
 sum(Problem_Highest_Freq$Count)/nrow(Incidents)
 ```
 
+Priority
+
+``` {r priority}
+ggplot(Incidents, aes(x=as.factor(Priority_Number), fill = Priority_Number)) + 
+  geom_bar(stat = "count") + scale_fill_gradient2(midpoint = 6, low="red", mid = "white", high="light blue") +
+  geom_text(stat='count', aes(label=..count..), hjust=0.2, size=3.5) + 
+  scale_x_discrete(limits = rev) + coord_flip() + 
+  xlab("Priority Number") + ylab("Count") + theme(legend.position = "none")
+
+print("Proportion of high priority")
+mean(Incidents$Priority_Number <= 2)
+print("Proportion of mid priority")
+mean(Incidents$Priority_Number == 3 | Incidents$Priority_Number == 4)
+print("Proportion of low priority")
+mean(Incidents$Priority_Number >= 5)
+```
+
 Response time histogram
 
 ``` {r Service Time Distribution}
@@ -123,6 +139,8 @@ Incidents_Enroute <- Incidents[Incidents$Time_First_Unit_Enroute >= 0 &!is.na(In
 Incidents_Arrived <- Incidents[Incidents$Time_First_Unit_Arrived >= 0 & !is.na(Incidents$Time_First_Unit_Arrived),]$Time_First_Unit_Arrived
 
 par(mfrow=c(3,1))
+
+length(Incidents_Enroute)
 
 hist(Incidents_assigned, xlim = c(0,5), breaks = max(Incidents_assigned)*20, xlab = "Assignment Time (minutes)", main = "")
 legend("topright", legend=c("mean", "median"),
@@ -429,7 +447,7 @@ for (problem in Problem_Highest_Freq$Problem_Type){
 
 ## Response Time Analysis
 
-Impact of the pandemic on response time.
+Impact of the pandemic on average response time.
 
 ``` {r Service Time Distribution COVID}
 pre_mid_post_service_time <- function(condition, data, maxtime, title){
@@ -438,10 +456,13 @@ pre_mid_post_service_time <- function(condition, data, maxtime, title){
   midcovid <- data[condition$Time_PhonePickUp_Date > as.Date("2020-03-17") & condition$Time_PhonePickUp_Date < as.Date("2020-05-13")]
 
   postcovid <- data[condition$Time_PhonePickUp_Date >= as.Date("2020-05-13")]
-
-print(summary(precovid))
-print(summary(midcovid))
-print(summary(postcovid))
+  
+  print("Period 1")
+  print(summary(precovid))
+  print("Period 2")
+  print(summary(midcovid))
+  print("Period 3")
+  print(summary(postcovid))
 
 hist(precovid, xlim = c(0,maxtime), breaks = max(precovid)*20, xlab = "Period 1", main = title)
 abline(v=mean(precovid), col="purple", lwd=2)
@@ -475,8 +496,47 @@ pre_mid_post_service_time(Incidents_Enroute, Incidents_Enroute$Time_First_Unit_E
 Incidents_Arrived <- Incidents[Incidents$Time_First_Unit_Arrived >= 0 & !is.na(Incidents$Time_First_Unit_Arrived),]
 Incidents_Arrived$Time_PhonePickUp_Date <- as.Date(Incidents_Arrived$Time_PhonePickUp_Date)
 pre_mid_post_service_time(Incidents_Arrived, Incidents_Arrived$Time_First_Unit_Arrived, 15, "Arrival Time (minutes)")
+```
+
+
+Impact of the pandemic on response time for high priority incidents.
+
+``` {r Service Time Analysis - High Priority}
+
+high_priority_proportion <- function(data){
+  overall_len = nrow(data)
+  data = data[data$Priority_Number <= 2,]
+  print("Frequncy of High Priority Incidents:")
+  print(nrow(data))
+  print("Frequncy of High Priority Incidents with less than 5 min response time:")
+  print(sum(data$Time_First_Unit_Arrived <= 5))
+  return(data$Time_First_Unit_Arrived <= 5)
+}
+
+pre_mid_post_high_priority_service_time <- function(data){
+  print("Period 1")
+  precovid <- high_priority_proportion(data[data$Time_PhonePickUp_Date <= as.Date("2020-03-17"),])
+  print("Proportion of High Priority Incidents whose response time is less than 5 min:")
+  print(mean(precovid))
+  
+  print("Period 2")
+  midcovid <- high_priority_proportion(data[data$Time_PhonePickUp_Date > as.Date("2020-03-17") & data$Time_PhonePickUp_Date < as.Date("2020-05-13"),])
+  print("Proportion of High Priority Incidents whose response time is less than 5 min:")
+  print(mean(midcovid))
+
+  print("Period 3")
+  postcovid <- high_priority_proportion(data[data$Time_PhonePickUp_Date >= as.Date("2020-05-13"),])
+  
+  print("Proportion of High Priority Incidents whose response time is less than 5 min:")
+  print(mean(postcovid))
+
+  print(t.test(precovid, postcovid, alternative = "greater"))
+}
+
+pre_mid_post_high_priority_service_time(Incidents_Arrived)
 
 ```
+
 
 ## Predictive Model Training
 
