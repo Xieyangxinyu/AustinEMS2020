@@ -2,6 +2,8 @@ Predicting Covid-19 EMS Incidents from Daily Hospitalization Trends
 ================
 Yangxinyu Xie, David Kulpanowski, Joshua Ong, Evdokia Nikolova, Ngoc Mai Tran
 
+[Link to Paper](https://onlinelibrary.wiley.com/doi/10.1111/ijcp.14920)
+
 Introduction: The aim of our retrospective study was to quantify the impact of Covid-19 on the temporal distribution of Emergency Medical Services (EMS) demand in Travis County, Austin, Texas, and propose a robust model to forecast Covid-19 EMS incidents.
 
 Methods: We analyzed the temporal distribution of EMS calls in the Austin-Travis County area between January 1st, 2019, and December 31st, 2020. Change point detection was performed to identify critical dates marking changes in EMS call distributions, and time series regression was applied for forecasting Covid-19 EMS incidents.
